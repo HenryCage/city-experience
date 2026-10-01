@@ -6,12 +6,12 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: placeId } = await params
+  const { id } = await params
 
   const { data: place, error: fetchError } = await supabaseAdmin
     .from('places')
     .select('name, description')
-    .eq('id', placeId)
+    .eq('id', id)
     .single()
 
   if (fetchError || !place) {
@@ -35,7 +35,7 @@ export async function POST(
   const { error: updateError } = await supabaseAdmin
     .from('places')
     .update({ embedding })
-    .eq('id', placeId)
+    .eq('id', id)
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
