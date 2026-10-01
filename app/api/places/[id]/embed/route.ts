@@ -4,9 +4,9 @@ import { voyage } from '@/lib/voyage'
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ placeId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { placeId } = await params
+  const { id: placeId } = await params
 
   const { data: place, error: fetchError } = await supabaseAdmin
     .from('places')
