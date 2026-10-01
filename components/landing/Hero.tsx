@@ -4,7 +4,7 @@ import Image from "next/image";
 export default function Hero() {
   return (
     <section className="overflow-hidden bg-(--background)">
-      <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-14 md:py-20 lg:min-h-162.5 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:py-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-10 sm:py-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:py-14">
 
         {/* Text */}
         <div className="relative z-10">

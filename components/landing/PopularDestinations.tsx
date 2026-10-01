@@ -36,8 +36,8 @@ const destinations = [
 
 export default function PopularDestinations() {
   return (
-    <section className="bg-(--background) px-6 py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl">
+    <section className="bg-(--background) px-6 py-16 sm:py-12">
+      <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -59,21 +59,21 @@ export default function PopularDestinations() {
         </div>
 
         {/* Destinations */}
-        <div className="-mx-6 mt-7 overflow-x-auto px-6 pb-2">
-          <div className="flex w-max gap-4">
+        <div className="-mx-6 mt-5 overflow-x-auto px-6 pb-2 lg:mx-0 lg:overflow-visible lg:px-0">
+          <div className="flex w-max gap-4 lg:mx-auto lg:w-fit">
             {destinations.map((destination) => (
               <Link
                 key={destination.name}
                 href={`/explore?city=${encodeURIComponent(destination.name)}`}
-                className="w-[170px] shrink-0 overflow-hidden rounded-2xl border border-(--border) bg-(--background) sm:w-[210px]"
+                className="w-42.5 shrink-0 overflow-hidden rounded-2xl border border-(--border) bg-(--background) sm:w-50"
               >
-                <div className="relative aspect-[4/3] overflow-hidden">
+                <div className="relative aspect-4/3 overflow-hidden">
                   <Image
                     src={destination.image}
                     alt={destination.name}
                     fill
                     className="object-cover transition duration-300 hover:scale-[1.03]"
-                    sizes="210px"
+                    sizes="200px"
                   />
                 </div>
 
