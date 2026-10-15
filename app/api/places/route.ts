@@ -1,76 +1,132 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { voyage } from '@/lib/voyage'
-
-export async function GET() {
-  const { data, error } = await supabase
-    .from('places')
-    .select('*')
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ places: data })
-}
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader) {
-    return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 })
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
-  const token = authHeader.replace('Bearer ', '')
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+  const body = await request.json();
 
-  const supabaseAsUser = createClient(supabaseUrl, supabasePublishableKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  })
+  const {
+    external_place_id,
+    name,
+    address,
+    city,
+    country,
+    latitude,
+    longitude,
+  } = body;
 
-  const { data: userData, error: userError } = await supabaseAsUser.auth.getUser()
-  if (userError || !userData.user) {
-    return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 })
+  if (!name?.trim()) {
+    return NextResponse.json(
+      { error: "name is required" },
+      { status: 400 }
+    );
   }
 
-  const body = await request.json()
+  if (!address?.trim()) {
+    return NextResponse.json(
+      { error: "address is required" },
+      { status: 400 }
+    );
+  }
 
-  const { data, error } = await supabaseAsUser
-    .from('places')
+  // Check if this exact external place already exists
+  if (external_place_id) {
+    const {
+      data: existingPlace,
+      error: existingError,
+    } = await supabase
+      .from("places")
+      .select(`
+        id,
+        name,
+        city,
+        country,
+        category,
+        description,
+        formatted_address,
+        external_place_id
+      `)
+      .eq(
+        "external_place_id",
+        external_place_id
+      )
+      .maybeSingle();
+
+    if (existingError) {
+      return NextResponse.json(
+        { error: existingError.message },
+        { status: 500 }
+      );
+    }
+
+    if (existingPlace) {
+      return NextResponse.json({
+        place: existingPlace,
+        already_exists: true,
+      });
+    }
+  }
+
+  const location =
+    latitude != null &&
+    longitude != null
+      ? `POINT(${longitude} ${latitude})`
+      : null;
+
+  const {
+    data: place,
+    error: insertError,
+  } = await supabase
+    .from("places")
     .insert({
-      name: body.name,
-      city: body.city,
-      category: body.category,
-      description: body.description,
-      created_by: userData.user.id,
+      name: name.trim(),
+      city: city ?? "",
+      country: country ?? "",
+      category: "Other",
+      description: null,
+      formatted_address: address.trim(),
+      external_place_id:
+        external_place_id ?? null,
+      location,
+      created_by: user.id,
     })
-    .select()
+    .select(`
+      id,
+      name,
+      city,
+      country,
+      category,
+      description,
+      formatted_address,
+      external_place_id
+    `)
+    .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (insertError) {
+    return NextResponse.json(
+      { error: insertError.message },
+      { status: 500 }
+    );
   }
 
-  const place = data[0]
-
-  // Generate and store the embedding right after creating the place
-  const textToEmbed = `${place.name}. ${place.description ?? ''}`
-
-  const result = await voyage.embed({
-    input: [textToEmbed],
-    model: 'voyage-4',
-    outputDimension: 1024,
-  })
-
-  const embedding = result.data?.[0]?.embedding
-
-  if (embedding) {
-    await supabaseAdmin
-      .from('places')
-      .update({ embedding })
-      .eq('id', place.id)
-  }
-
-  return NextResponse.json({ place }, { status: 201 })
+  return NextResponse.json(
+    {
+      place,
+      already_exists: false,
+    },
+    { status: 201 }
+  );
 }
